@@ -195,11 +195,11 @@ Information flows through the state as follows:
 
 For each tool, describe the specific failure mode you're handling and what the agent does in response.
 
-| Tool            | Failure mode                          | Agent response                                                                                                |
-| --------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| search_listings | No results match the query            | Inform the user that no matching items were found, suggest modifying the search criteria, and stop execution. |
-| suggest_outfit  | Wardrobe is empty                     | Generate general styling advice for the selected item and continue to create_fit_card().                      |
-| create_fit_card | Outfit input is missing or incomplete | Return a descriptive error message and stop execution.                                                        |
+| Tool            | Failure mode                          | Agent response                                                                                                                                                                                                                                         |
+| --------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| search_listings | No results match the query            | Inform the user that no matching items were found, suggest modifying the search criteria, and stop execution. Example message: "No matching items were found. Try broadening your search, increasing your maximum price, or using different keywords." |
+| suggest_outfit  | Wardrobe is empty                     | Generate general styling advice for the selected item and continue to create_fit_card(). Example message: "Since no wardrobe items were provided, here are some general styling ideas for this item: ..."                                              |
+| create_fit_card | Outfit input is missing or incomplete | Return a descriptive error message and stop execution. Example message: "Unable to generate a fit card because the outfit recommendation was missing or incomplete. Please try generating an outfit suggestion again."                                 |
 
 ---
 
