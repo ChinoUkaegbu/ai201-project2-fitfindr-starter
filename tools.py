@@ -273,3 +273,89 @@ Requirements:
     )
 
     return response.choices[0].message.content.strip()
+
+
+# ── Tool 4: assess_price_fairness ───────────────────────────────────────────────────
+def assess_price_fairness(item: dict, listings: list[dict]) -> str:
+    """
+    Compare the price of an item against similar listings in the dataset
+    and return a human-readable fairness assessment.
+
+    Similarity is defined as:
+        - same category
+        - AND at least one overlapping style tag
+
+    Fallback:
+        - if no style-tag matches exist, fall back to category-only matches
+        - if still none, return a "not enough data" message
+
+    Args:
+        item:     The listing dict for the thrifted item.
+        listings: A list of similar listing dicts to compare against.
+
+    Returns:
+        A string indicating whether the price is "fair", "expensive", or "cheap"
+        relative to similar items, along with a brief explanation.
+    """
+    if not item or not listings:
+        return "Not enough data to assess pricing."
+
+    item_price = item.get("price", 0)
+    item_category = item.get("category", "")
+    item_tags = set(item.get("style_tags", []))
+
+    # ── Step 1: Find similar items ─────────────────────────────
+    similar = [
+        l
+        for l in listings
+        if l.get("category") == item_category
+        and len(item_tags & set(l.get("style_tags", []))) > 0
+        and l.get("price") is not None
+    ]
+
+    # ── Fallback: relax filter if too strict ───────────────────
+    if len(similar) < 3:
+        similar = [
+            l
+            for l in listings
+            if l.get("category") == item_category and l.get("price") is not None
+        ]
+
+    # ── Final fallback: nothing to compare ─────────────────────
+    if not similar:
+        return (
+            "Not enough comparable items in the dataset to assess pricing "
+            "for this category."
+        )
+
+    # ── Step 2: Extract prices ────────────────────────────────
+    prices = [l["price"] for l in similar if isinstance(l.get("price"), (int, float))]
+
+    if not prices:
+        return "Not enough valid price data to assess pricing."
+
+    avg_price = sum(prices) / len(prices)
+    min_price = min(prices)
+    max_price = max(prices)
+
+    # ── Step 3: Determine pricing label ───────────────────────
+    if item_price < avg_price * 0.85:
+        label = "cheap"
+    elif item_price > avg_price * 1.15:
+        label = "expensive"
+    else:
+        label = "fair"
+
+    # ── Step 4: Pick a few examples ───────────────────────────
+    examples = sorted(similar, key=lambda x: abs(x["price"] - item_price))[:3]
+
+    example_text = "\n".join(f"- {e['title']} — ${e['price']:.0f}" for e in examples)
+
+    # ── Step 5: Build explanation ─────────────────────────────
+    return (
+        f"This item is considered {label} based on similar listings.\n\n"
+        f"Comparable items in the dataset range from ${min_price:.0f} "
+        f"to ${max_price:.0f}, with an average of ${avg_price:.0f}.\n\n"
+        f"Closest examples:\n{example_text}\n\n"
+        f"At ${item_price:.0f}, this listing is {label} relative to the market."
+    )

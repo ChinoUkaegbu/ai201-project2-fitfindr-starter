@@ -20,7 +20,7 @@ from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
 # ── query handler ─────────────────────────────────────────────────────────────
 
 
-def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
+def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str, str]:
     """
     Called by Gradio when the user submits a query.
 
@@ -45,7 +45,7 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
     """
     # Step 1: Guard against empty query
     if not user_query or user_query.strip() == "":
-        return "Please enter a search query.", "", ""
+        return "Please enter a search query.", "", "", ""
 
     # Step 2: Select wardrobe
     if wardrobe_choice == "Example wardrobe":
@@ -58,7 +58,7 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
 
     # Step 4: Handle errors
     if session["error"]:
-        return session["error"], "", ""
+        return session["error"], "", "", ""
 
     # Step 5: Format listing
     item = session["selected_item"]
@@ -76,6 +76,7 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
         listing_text,
         session["outfit_suggestion"],
         session["fit_card"],
+        session["price_analysis"],
     )
 
 
@@ -131,6 +132,12 @@ Describe what you're looking for — include size and price if you want to filte
                 interactive=False,
             )
 
+        price_output = gr.Textbox(
+            label="💸 Price assessment",
+            lines=8,
+            interactive=False,
+        )
+
         gr.Examples(
             examples=[[q, "Example wardrobe"] for q in EXAMPLE_QUERIES],
             inputs=[query_input, wardrobe_choice],
@@ -140,12 +147,12 @@ Describe what you're looking for — include size and price if you want to filte
         submit_btn.click(
             fn=handle_query,
             inputs=[query_input, wardrobe_choice],
-            outputs=[listing_output, outfit_output, fitcard_output],
+            outputs=[listing_output, outfit_output, fitcard_output, price_output],
         )
         query_input.submit(
             fn=handle_query,
             inputs=[query_input, wardrobe_choice],
-            outputs=[listing_output, outfit_output, fitcard_output],
+            outputs=[listing_output, outfit_output, fitcard_output, price_output],
         )
 
     return demo

@@ -20,7 +20,13 @@ Usage (once implemented):
 
 import re
 
-from tools import search_listings, suggest_outfit, create_fit_card
+from tools import (
+    search_listings,
+    suggest_outfit,
+    create_fit_card,
+    assess_price_fairness,
+)
+from utils.data_loader import load_listings
 
 # ── session state ─────────────────────────────────────────────────────────────
 
@@ -44,6 +50,7 @@ def _new_session(query: str, wardrobe: dict) -> dict:
         "outfit_suggestion": None,  # string returned by suggest_outfit
         "fit_card": None,  # string returned by create_fit_card
         "error": None,  # set if the interaction ended early
+        "price_analysis": None,  # string returned by assess_price_fairness
     }
 
 
@@ -159,6 +166,10 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     # STEP 6: create fit card
     fit_card = create_fit_card(outfit, selected_item)
     session["fit_card"] = fit_card
+
+    # BONUS STEP: assess price fairness
+    price_analysis = assess_price_fairness(session["selected_item"], load_listings())
+    session["price_analysis"] = price_analysis
 
     # STEP 7: return session
     return session
