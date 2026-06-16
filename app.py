@@ -17,8 +17,8 @@ import gradio as gr
 from agent import run_agent
 from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
 
-
 # ── query handler ─────────────────────────────────────────────────────────────
+
 
 def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
     """
@@ -43,8 +43,40 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
            string and return it along with session["outfit_suggestion"] and
            session["fit_card"].
     """
-    # TODO: implement this function
-    return "Agent not yet implemented.", "", ""
+    # Step 1: Guard against empty query
+    if not user_query or user_query.strip() == "":
+        return "Please enter a search query.", "", ""
+
+    # Step 2: Select wardrobe
+    if wardrobe_choice == "Example wardrobe":
+        wardrobe = get_example_wardrobe()
+    else:
+        wardrobe = get_empty_wardrobe()
+
+    # Step 3: Run agent
+    session = run_agent(user_query, wardrobe)
+
+    # Step 4: Handle errors
+    if session["error"]:
+        return session["error"], "", ""
+
+    # Step 5: Format listing
+    item = session["selected_item"]
+
+    listing_text = (
+        f"Title: {item['title']}\n"
+        f"Price: ${item['price']:.2f}\n"
+        f"Platform: {item['platform']}\n"
+        f"Size: {item['size']}\n"
+        f"Condition: {item['condition']}\n"
+        f"Description: {item['description']}"
+    )
+
+    return (
+        listing_text,
+        session["outfit_suggestion"],
+        session["fit_card"],
+    )
 
 
 # ── interface ─────────────────────────────────────────────────────────────────
@@ -54,8 +86,9 @@ EXAMPLE_QUERIES = [
     "90s track jacket in size M",
     "flowy midi skirt under $40",
     "black combat boots size 8",
-    "designer ballgown size XXS under $5",   # deliberate no-results test
+    "designer ballgown size XXS under $5",  # deliberate no-results test
 ]
+
 
 def build_interface():
     with gr.Blocks(title="FitFindr") as demo:
