@@ -13,6 +13,7 @@ Tools:
 """
 
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -70,7 +71,45 @@ def search_listings(
     Before writing code, fill in the Tool 1 section of planning.md.
     """
     # Replace this with your implementation
-    return []
+    listings = load_listings()
+    query_words = set(re.findall(r"\w+", description.lower()))
+
+    scored_results = []
+
+    for listing in listings:
+
+        # Price filter
+        if max_price is not None and listing["price"] > max_price:
+            continue
+
+        # Size filter
+        if size is not None:
+            if size.lower() not in listing["size"].lower():
+                continue
+
+        searchable_text = " ".join([
+            listing["title"],
+            listing["description"],
+            listing["category"],
+            " ".join(listing["style_tags"]),
+            " ".join(listing["colors"]),
+            listing["brand"] or "",
+        ]).lower()
+
+        score = sum(
+            1 for word in query_words
+            if word in searchable_text
+        )
+
+        if score > 0:
+            scored_results.append((score, listing))
+
+    scored_results.sort(
+        key=lambda result: result[0],
+        reverse=True
+    )
+
+    return [listing for score, listing in scored_results]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
