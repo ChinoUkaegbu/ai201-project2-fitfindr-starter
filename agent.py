@@ -18,10 +18,12 @@ Usage (once implemented):
     print(result["error"])   # None on success
 """
 
+import re
+
 from tools import search_listings, suggest_outfit, create_fit_card
 
-
 # ── session state ─────────────────────────────────────────────────────────────
+
 
 def _new_session(query: str, wardrobe: dict) -> dict:
     """
@@ -34,18 +36,49 @@ def _new_session(query: str, wardrobe: dict) -> dict:
     You may add fields to this dict as needed for your implementation.
     """
     return {
-        "query": query,              # original user query
-        "parsed": {},                # extracted description / size / max_price
-        "search_results": [],        # list of matching listing dicts
-        "selected_item": None,       # top result, passed into suggest_outfit
-        "wardrobe": wardrobe,        # user's wardrobe dict
-        "outfit_suggestion": None,   # string returned by suggest_outfit
-        "fit_card": None,            # string returned by create_fit_card
-        "error": None,               # set if the interaction ended early
+        "query": query,  # original user query
+        "parsed": {},  # extracted description / size / max_price
+        "search_results": [],  # list of matching listing dicts
+        "selected_item": None,  # top result, passed into suggest_outfit
+        "wardrobe": wardrobe,  # user's wardrobe dict
+        "outfit_suggestion": None,  # string returned by suggest_outfit
+        "fit_card": None,  # string returned by create_fit_card
+        "error": None,  # set if the interaction ended early
+    }
+
+
+# ── simple parser helper ──────────────────────────────────────────────────────
+
+
+def _parse_query(query: str) -> dict:
+    """
+    Extract description, size, and max_price from user query.
+    """
+
+    # price: $30, 30 dollars, under 30, etc.
+    price_match = re.search(r"\$?(\d+)", query)
+    max_price = float(price_match.group(1)) if price_match else None
+
+    # size: very simple heuristic (M, L, S, XL, etc.)
+    size_match = re.search(r"\b(xs|s|m|l|xl|xxl)\b", query.lower())
+    size = size_match.group(1).upper() if size_match else None
+
+    # remove extracted tokens to form description
+    cleaned = re.sub(r"\$?\d+", "", query)
+    cleaned = re.sub(r"\bunder\b|\bsize\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(xs|s|m|l|xl|xxl)\b", "", cleaned, flags=re.IGNORECASE)
+
+    description = cleaned.strip()
+
+    return {
+        "description": description,
+        "size": size,
+        "max_price": max_price,
     }
 
 
 # ── planning loop ─────────────────────────────────────────────────────────────
+
 
 def run_agent(query: str, wardrobe: dict) -> dict:
     """
@@ -92,9 +125,42 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     Before writing code, complete the Planning Loop and State Management sections
     of planning.md — your implementation should match what you described there.
     """
-    # TODO: implement the planning loop
     session = _new_session(query, wardrobe)
-    session["error"] = "Planning loop not yet implemented."
+
+    # STEP 2: parse query
+    parsed = _parse_query(query)
+    session["parsed"] = parsed
+
+    # STEP 3: search listings
+    results = search_listings(
+        description=parsed["description"],
+        size=parsed["size"],
+        max_price=parsed["max_price"],
+    )
+
+    session["search_results"] = results
+
+    # FAILURE CASE (critical branch)
+    if not results:
+        session["error"] = (
+            "No matching items were found. Try broadening your search, "
+            "increasing your maximum price, or using different keywords."
+        )
+        return session
+
+    # STEP 4: select top item
+    selected_item = results[0]
+    session["selected_item"] = selected_item
+
+    # STEP 5: suggest outfit
+    outfit = suggest_outfit(selected_item, wardrobe)
+    session["outfit_suggestion"] = outfit
+
+    # STEP 6: create fit card
+    fit_card = create_fit_card(outfit, selected_item)
+    session["fit_card"] = fit_card
+
+    # STEP 7: return session
     return session
 
 
