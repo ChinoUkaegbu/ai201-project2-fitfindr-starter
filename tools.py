@@ -25,6 +25,7 @@ load_dotenv()
 
 # ── Groq client ───────────────────────────────────────────────────────────────
 
+
 def _get_groq_client():
     """Initialize and return a Groq client using GROQ_API_KEY from .env."""
     api_key = os.environ.get("GROQ_API_KEY")
@@ -36,6 +37,7 @@ def _get_groq_client():
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
+
 
 def search_listings(
     description: str,
@@ -70,7 +72,6 @@ def search_listings(
 
     Before writing code, fill in the Tool 1 section of planning.md.
     """
-    # Replace this with your implementation
     listings = load_listings()
     query_words = set(re.findall(r"\w+", description.lower()))
 
@@ -87,32 +88,29 @@ def search_listings(
             if size.lower() not in listing["size"].lower():
                 continue
 
-        searchable_text = " ".join([
-            listing["title"],
-            listing["description"],
-            listing["category"],
-            " ".join(listing["style_tags"]),
-            " ".join(listing["colors"]),
-            listing["brand"] or "",
-        ]).lower()
+        searchable_text = " ".join(
+            [
+                listing["title"],
+                listing["description"],
+                listing["category"],
+                " ".join(listing["style_tags"]),
+                " ".join(listing["colors"]),
+                listing["brand"] or "",
+            ]
+        ).lower()
 
-        score = sum(
-            1 for word in query_words
-            if word in searchable_text
-        )
+        score = sum(1 for word in query_words if word in searchable_text)
 
         if score > 0:
             scored_results.append((score, listing))
 
-    scored_results.sort(
-        key=lambda result: result[0],
-        reverse=True
-    )
+    scored_results.sort(key=lambda result: result[0], reverse=True)
 
     return [listing for score, listing in scored_results]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
+
 
 def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     """
@@ -139,11 +137,72 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 
     Before writing code, fill in the Tool 2 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+    wardrobe_items = wardrobe.get("items", [])
+
+    item_info = f"""
+Title: {new_item['title']}
+Category: {new_item['category']}
+Description: {new_item['description']}
+Style Tags: {', '.join(new_item['style_tags'])}
+Colors: {', '.join(new_item['colors'])}
+Condition: {new_item['condition']}
+"""
+
+    # Empty wardrobe case
+    if not wardrobe_items:
+        prompt = f"""
+You are a fashion stylist.
+
+The user is considering buying this thrifted item:
+
+{item_info}
+
+The user has not provided any wardrobe items.
+
+Suggest 1-2 outfit ideas for styling this piece.
+Explain what kinds of bottoms, shoes, outerwear, or accessories pair well with it.
+Keep the response concise (2-4 short paragraphs).
+"""
+    else:
+        wardrobe_text = "\n\n".join(f"""
+Name: {item['name']}
+Category: {item['category']}
+Colors: {', '.join(item['colors'])}
+Style Tags: {', '.join(item['style_tags'])}
+Notes: {item.get('notes') or 'None'}
+""".strip() for item in wardrobe_items)
+
+        prompt = f"""
+You are a fashion stylist.
+
+The user owns the following wardrobe items:
+
+{wardrobe_text}
+
+The user is considering buying this thrifted item:
+
+{item_info}
+
+Create 1-2 complete outfits using the thrifted item and specific pieces from the wardrobe.
+
+Requirements:
+- Refer to wardrobe items by name.
+- Explain why the pieces work together.
+- Mention the overall style or vibe.
+- Keep the response concise.
+"""
+    client = _get_groq_client()
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+    )
+
+    return response.choices[0].message.content.strip()
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
+
 
 def create_fit_card(outfit: str, new_item: dict) -> str:
     """
