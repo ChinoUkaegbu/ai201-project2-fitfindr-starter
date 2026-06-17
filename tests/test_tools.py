@@ -1,4 +1,9 @@
-from tools import create_fit_card, search_listings, suggest_outfit
+from tools import (
+    assess_price_fairness,
+    create_fit_card,
+    search_listings,
+    suggest_outfit,
+)
 from utils.data_loader import get_empty_wardrobe, get_example_wardrobe, load_listings
 
 
@@ -65,6 +70,16 @@ def test_create_fit_card_valid_outfit():
     outfit = "Pair with baggy jeans, sneakers, and a denim jacket."
 
     result = create_fit_card(outfit, item)
+
+    assert isinstance(result, str)
+    assert len(result.strip()) > 0
+
+
+def test_assess_price_fairness_returns_string():
+    listings = load_listings()
+    item = listings[0]
+
+    result = assess_price_fairness(item, listings)
 
     assert isinstance(result, str)
     assert len(result.strip()) > 0
