@@ -291,7 +291,7 @@ def assess_price_fairness(item: dict, listings: list[dict]) -> str:
 
     Args:
         item:     The listing dict for the thrifted item.
-        listings: A list of similar listing dicts to compare against.
+        listings: A list containing all the listings in the database.
 
     Returns:
         A string indicating whether the price is "fair", "expensive", or "cheap"
